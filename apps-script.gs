@@ -3,7 +3,7 @@ function doPost(e) {
     // Sheet ID dari Google Sheets
     const SHEET_ID = '1XYiPYyFAF5duTfazTwSOqQdnEYgccMwO0LF0j-RnngI';
     const sheet = SpreadsheetApp.openById(SHEET_ID);
-    const ws = sheet.getSheetByName('Responses');
+    const ws = sheet.getSheetByName('wedding');
     
     // Parse data dari POST request
     const data = JSON.parse(e.postData.contents);
