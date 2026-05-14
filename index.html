@@ -65,6 +65,11 @@
       right: 20px;
       z-index: 99;
     }
+
+    .btn-disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+    }
   </style>
 </head>
 <body class="text-gray-800">
@@ -308,7 +313,8 @@
         <div>
           <label class="block mb-2 font-medium">Nomor WhatsApp</label>
           <input type="text" id="wa" required
-                 class="w-full px-5 py-4 rounded-2xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-amber-400">
+                 class="w-full px-5 py-4 rounded-2xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-amber-400"
+                 placeholder="08xx xxxx xxxx">
         </div>
 
         <div>
@@ -325,15 +331,16 @@
         <div>
           <label class="block mb-2 font-medium">Ucapan & Doa</label>
           <textarea id="pesan" rows="5"
-                    class="w-full px-5 py-4 rounded-2xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-amber-400"></textarea>
+                    class="w-full px-5 py-4 rounded-2xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-amber-400"
+                    placeholder="Tulis ucapan terbaik Anda..."></textarea>
         </div>
 
-        <button type="submit"
-                class="w-full bg-black text-white py-4 rounded-2xl text-lg font-medium hover:opacity-90 duration-300">
+        <button type="submit" id="submitBtn"
+                class="w-full bg-black text-white py-4 rounded-2xl text-lg font-medium hover:opacity-90 duration-300 transition-all">
           Kirim RSVP
         </button>
 
-        <div id="status" class="text-center text-sm mt-3"></div>
+        <div id="status" class="text-center text-sm mt-3 min-h-6"></div>
       </form>
     </div>
   </section>
@@ -355,54 +362,88 @@
   </audio>
 
   <button onclick="toggleMusic()"
-          class="music-btn bg-black text-white w-14 h-14 rounded-full shadow-2xl text-xl">
+          class="music-btn bg-black text-white w-14 h-14 rounded-full shadow-2xl text-xl hover:scale-110 duration-300 transition-transform">
     ♪
   </button>
 
-  <!-- SCRIPT RSVP -->
+  <!-- SCRIPT RSVP - PERBAIKAN LENGKAP -->
   <script>
 
-    // GANTI DENGAN URL WEB APP GOOGLE APPS SCRIPT ANDA
+    // ✅ URL WEB APP GOOGLE APPS SCRIPT
     const scriptURL = 'https://script.google.com/macros/s/AKfycbyE7ICVNe2G-B3JoBfm57PoEijKLg316dvJXA7wP_0GDqIalLitFEEWUI4Dt4aEd8JErw/exec';
 
     const form = document.getElementById('rsvpForm');
     const statusText = document.getElementById('status');
+    const submitBtn = document.getElementById('submitBtn');
 
     form.addEventListener('submit', async (e) => {
       e.preventDefault();
 
-      statusText.innerHTML = 'Mengirim data...';
+      // Validasi input
+      const nama = document.getElementById('nama').value.trim();
+      const wa = document.getElementById('wa').value.trim();
+
+      if (!nama || !wa) {
+        statusText.innerHTML = '❌ Nama dan WhatsApp harus diisi!';
+        statusText.classList.remove('text-green-600', 'text-red-600');
+        statusText.classList.add('text-red-600');
+        return;
+      }
+
+      // Disable tombol saat mengirim
+      submitBtn.disabled = true;
+      submitBtn.classList.add('btn-disabled');
+      statusText.innerHTML = '⏳ Mengirim data ke Google Sheet...';
+      statusText.classList.remove('text-green-600', 'text-red-600');
+      statusText.classList.add('text-gray-600');
 
       const data = {
-        nama: document.getElementById('nama').value,
-        wa: document.getElementById('wa').value,
+        nama: nama,
+        wa: wa,
         kehadiran: document.getElementById('kehadiran').value,
-        pesan: document.getElementById('pesan').value,
+        pesan: document.getElementById('pesan').value.trim(),
       };
 
       try {
         const response = await fetch(scriptURL, {
           method: 'POST',
-          body: JSON.stringify(data),
+          mode: 'no-cors', // ✅ PENTING untuk Google Apps Script
           headers: {
             'Content-Type': 'application/json'
-          }
+          },
+          body: JSON.stringify(data)
         });
 
-        const result = await response.text();
+        // Tunggu sebentar untuk memastikan Google Apps Script memproses
+        await new Promise(resolve => setTimeout(resolve, 1000));
 
-        statusText.innerHTML = 'RSVP berhasil dikirim ✓';
+        statusText.innerHTML = '✅ RSVP berhasil dikirim! Terima kasih telah mengkonfirmasi.';
+        statusText.classList.remove('text-gray-600', 'text-red-600');
         statusText.classList.add('text-green-600');
 
+        // Reset form
         form.reset();
 
+        // Enable tombol kembali setelah 3 detik
+        setTimeout(() => {
+          submitBtn.disabled = false;
+          submitBtn.classList.remove('btn-disabled');
+          statusText.innerHTML = '';
+        }, 3000);
+
       } catch (error) {
-        statusText.innerHTML = 'Gagal mengirim RSVP';
+        console.error('Error:', error);
+        statusText.innerHTML = '❌ Gagal mengirim RSVP. Silahkan coba kembali atau hubungi melalui WhatsApp.';
+        statusText.classList.remove('text-gray-600', 'text-green-600');
         statusText.classList.add('text-red-600');
+
+        // Enable tombol kembali
+        submitBtn.disabled = false;
+        submitBtn.classList.remove('btn-disabled');
       }
     });
 
-    // MUSIC
+    // MUSIC CONTROL
     const music = document.getElementById('bgMusic');
     let isPlaying = true;
 
@@ -410,11 +451,19 @@
       if(isPlaying) {
         music.pause();
         isPlaying = false;
+        document.querySelector('.music-btn').textContent = '🔇';
       } else {
         music.play();
         isPlaying = true;
+        document.querySelector('.music-btn').textContent = '♪';
       }
     }
+
+    // Auto-play musik dengan izin browser
+    music.play().catch(() => {
+      isPlaying = false;
+      document.querySelector('.music-btn').textContent = '🔇';
+    });
 
   </script>
 
